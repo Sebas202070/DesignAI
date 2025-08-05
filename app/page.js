@@ -10,40 +10,41 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
+
   const videoRef = useRef(null);
   const fileInputRef = useRef(null);
-  const streamRef = useRef(null); // Ref para el stream de la cámara
+  const streamRef = useRef(null);
 
-  // useEffect para iniciar/detener la cámara de manera segura
+  // useEffect para manejar el ciclo de vida de la cámara
   useEffect(() => {
+    // Si la cámara debe estar activa, la iniciamos
+    if (isCameraActive) {
+      startCamera();
+    } else {
+      stopCamera();
+    }
     // Limpiar al desmontar el componente
     return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
+      stopCamera();
     };
-  }, []);
+  }, [isCameraActive]);
 
   const startCamera = async () => {
     try {
-      // Pedimos la cámara trasera, o la frontal si la trasera no está disponible
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { exact: 'environment' } },
-        audio: false,
+        video: { facingMode: { exact: "environment" } },
+        audio: false
       });
-
       streamRef.current = stream;
-
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.onloadedmetadata = () => {
           videoRef.current.play();
-          setIsCameraActive(true);
         };
       }
     } catch (err) {
       console.error("Error al acceder a la cámara:", err);
-      // Intentamos con la cámara frontal como alternativa
+      // Intentamos con la cámara frontal como alternativa si la trasera falla
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
         streamRef.current = stream;
@@ -51,7 +52,6 @@ export default function HomePage() {
           videoRef.current.srcObject = stream;
           videoRef.current.onloadedmetadata = () => {
             videoRef.current.play();
-            setIsCameraActive(true);
           };
         }
       } catch (frontErr) {
@@ -66,23 +66,25 @@ export default function HomePage() {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
-      setIsCameraActive(false);
     }
+    setOriginalImagePreview(null);
+    setIsCameraActive(false);
   };
 
   const capturePhoto = () => {
     const canvas = document.createElement('canvas');
     const video = videoRef.current;
-    
-    // Asegurarse de que el canvas tenga las mismas dimensiones que el video
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL('image/png');
-    setOriginalImagePreview(dataUrl);
-    stopCamera();
+    if (video) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/png');
+      setOriginalImagePreview(dataUrl);
+      stopCamera();
+    } else {
+      setError("La cámara no está lista para capturar.");
+    }
   };
 
   const handleFileChange = (event) => {
@@ -94,6 +96,7 @@ export default function HomePage() {
       };
       reader.readAsDataURL(file);
     }
+    stopCamera();
   };
 
   const handleGenerateImage = async () => {
@@ -106,7 +109,6 @@ export default function HomePage() {
         throw new Error("Por favor, sube una imagen o captura una foto.");
       }
 
-      // Paso 1: Analizar la imagen (enviando el base64)
       const analysisResponse = await fetch("/api/analyze-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -119,7 +121,6 @@ export default function HomePage() {
 
       const { analysis } = await analysisResponse.json();
 
-      // Paso 2: Generar la imagen con el análisis y el prompt
       const generateResponse = await fetch("/api/generate-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -181,7 +182,7 @@ export default function HomePage() {
                 Subir Imagen
               </label>
               <button
-                onClick={isCameraActive ? stopCamera : startCamera}
+                onClick={() => setIsCameraActive(!isCameraActive)}
                 className={`text-sm lg:text-base py-2 px-3 lg:px-4 rounded transition-colors ${
                   isCameraActive ? "bg-red-500 hover:bg-red-600" : "bg-cyan-500 hover:bg-cyan-600 text-black"
                 }`}
