@@ -9,26 +9,28 @@ export default function HomePage() {
   const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [useCamera, setUseCamera] = useState(false); // Nuevo estado para alternar cámara/archivo
+  const [cameraActive, setCameraActive] = useState(false); // Clave: estado de cámara activa
 
   const videoRef = useRef(null);
   const fileInputRef = useRef(null);
   const streamRef = useRef(null);
 
+  // Efecto para iniciar/detener la cámara
   useEffect(() => {
-    // Si isCameraActive es true, iniciamos la cámara.
-    if (isCameraActive) {
+    if (useCamera) {
       startCamera();
     } else {
       stopCamera();
     }
-    // Limpiar al desmontar el componente
     return () => {
       stopCamera();
     };
-  }, [isCameraActive]);
+  }, [useCamera]);
 
   const startCamera = async () => {
+    setError(null);
+    setCameraActive(false); 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { exact: "environment" } },
@@ -39,10 +41,12 @@ export default function HomePage() {
         videoRef.current.srcObject = stream;
         videoRef.current.onloadedmetadata = () => {
           videoRef.current.play();
+          setCameraActive(true); // La cámara está activa y reproduciéndose
         };
       }
     } catch (err) {
       console.error("Error al acceder a la cámara:", err);
+      // Opcional: intentar con la cámara frontal si la trasera falla
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
         streamRef.current = stream;
@@ -50,12 +54,14 @@ export default function HomePage() {
           videoRef.current.srcObject = stream;
           videoRef.current.onloadedmetadata = () => {
             videoRef.current.play();
+            setCameraActive(true);
+            setError(null);
           };
         }
       } catch (frontErr) {
-        setError("No se pudo acceder a ninguna cámara. Por favor, revisa los permisos.");
-        setIsCameraActive(false);
-        console.error("Error al acceder a la cámara frontal:", frontErr);
+        setError("No se encontró ninguna cámara disponible o el acceso fue denegado.");
+        setUseCamera(false);
+        setCameraActive(false);
       }
     }
   };
@@ -65,25 +71,26 @@ export default function HomePage() {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
-    // Solo actualizamos el estado si no fue a causa de un error.
-    if (!error) {
-      setIsCameraActive(false);
+    if (videoRef.current) {
+        videoRef.current.srcObject = null;
     }
+    setOriginalImagePreview(null);
+    setCameraActive(false);
   };
 
   const capturePhoto = () => {
     const canvas = document.createElement('canvas');
     const video = videoRef.current;
-    if (video) {
+    if (video && cameraActive) {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const dataUrl = canvas.toDataURL('image/png');
       setOriginalImagePreview(dataUrl);
-      setIsCameraActive(false); // Desactivamos la cámara después de capturar
+      setUseCamera(false); // Detener la cámara y volver al modo de archivo
     } else {
-      setError("La cámara no está lista para capturar.");
+      setError("La cámara no está activa o lista para capturar.");
     }
   };
 
@@ -96,7 +103,8 @@ export default function HomePage() {
       };
       reader.readAsDataURL(file);
     }
-    setIsCameraActive(false);
+    setUseCamera(false);
+    stopCamera();
   };
 
   const handleGenerateImage = async () => {
@@ -145,6 +153,7 @@ export default function HomePage() {
     setOriginalImagePreview(null);
     setGeneratedImageUrl(null);
     setError(null);
+    setUseCamera(false);
     stopCamera();
     if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -182,30 +191,46 @@ export default function HomePage() {
                 Subir Imagen
               </label>
               <button
-                onClick={() => setIsCameraActive(!isCameraActive)}
+                onClick={() => setUseCamera(true)}
                 className={`text-sm lg:text-base py-2 px-3 lg:px-4 rounded transition-colors ${
-                  isCameraActive ? "bg-red-500 hover:bg-red-600" : "bg-cyan-500 hover:bg-cyan-600 text-black"
+                  useCamera ? "bg-red-500 hover:bg-red-600" : "bg-cyan-500 hover:bg-cyan-600 text-black"
                 }`}
               >
-                {isCameraActive ? "Detener Cámara" : "Tomar Foto"}
+                Tomar Foto
               </button>
             </div>
-            {isCameraActive && (
-              <div className="mt-4">
-                <video 
-                  ref={videoRef} 
-                  autoPlay 
-                  className="w-full h-auto rounded" 
-                  playsInline 
-                  muted 
-                />
-                <button
-                  onClick={capturePhoto}
-                  className="mt-2 w-full py-2 bg-green-500 hover:bg-green-600 rounded font-bold"
-                >
-                  Capturar
-                </button>
-              </div>
+            {error && (
+                <div className="mt-4 p-3 bg-red-500 rounded text-sm text-center">
+                {error}
+                </div>
+            )}
+            {useCamera ? (
+                <div className="mt-4">
+                    {!cameraActive && !error && (
+                        <p className="text-gray-400 mb-2">Iniciando cámara... Por favor, espera.</p>
+                    )}
+                    <video 
+                        ref={videoRef} 
+                        autoPlay 
+                        className="w-full h-auto rounded" 
+                        playsInline 
+                        muted 
+                        style={{ display: cameraActive ? 'block' : 'none' }}
+                    />
+                    <button
+                        onClick={capturePhoto}
+                        className="mt-2 w-full py-2 bg-green-500 hover:bg-green-600 rounded font-bold"
+                        disabled={!cameraActive}
+                    >
+                        Capturar
+                    </button>
+                </div>
+            ) : (
+                originalImagePreview && (
+                    <div className="mt-4">
+                        <img src={originalImagePreview} alt="Imagen Original" className="object-contain w-full h-full rounded" />
+                    </div>
+                )
             )}
           </div>
 
@@ -239,11 +264,6 @@ export default function HomePage() {
               Reiniciar
               </button>
           </div>
-          {error && (
-            <div className="mt-4 p-3 bg-red-500 rounded text-sm text-center">
-              {error}
-            </div>
-          )}
         </div>
       </div>
 
