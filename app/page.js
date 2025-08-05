@@ -9,14 +9,13 @@ export default function HomePage() {
   const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [useCamera, setUseCamera] = useState(false); // Nuevo estado para alternar cámara/archivo
-  const [cameraActive, setCameraActive] = useState(false); // Clave: estado de cámara activa
+  const [useCamera, setUseCamera] = useState(false);
+  const [cameraActive, setCameraActive] = useState(false);
 
   const videoRef = useRef(null);
   const fileInputRef = useRef(null);
   const streamRef = useRef(null);
 
-  // Efecto para iniciar/detener la cámara
   useEffect(() => {
     if (useCamera) {
       startCamera();
@@ -41,12 +40,11 @@ export default function HomePage() {
         videoRef.current.srcObject = stream;
         videoRef.current.onloadedmetadata = () => {
           videoRef.current.play();
-          setCameraActive(true); // La cámara está activa y reproduciéndose
+          setCameraActive(true);
         };
       }
     } catch (err) {
       console.error("Error al acceder a la cámara:", err);
-      // Opcional: intentar con la cámara frontal si la trasera falla
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
         streamRef.current = stream;
@@ -74,7 +72,6 @@ export default function HomePage() {
     if (videoRef.current) {
         videoRef.current.srcObject = null;
     }
-    setOriginalImagePreview(null);
     setCameraActive(false);
   };
 
@@ -88,7 +85,7 @@ export default function HomePage() {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const dataUrl = canvas.toDataURL('image/png');
       setOriginalImagePreview(dataUrl);
-      setUseCamera(false); // Detener la cámara y volver al modo de archivo
+      setUseCamera(false);
     } else {
       setError("La cámara no está activa o lista para capturar.");
     }
