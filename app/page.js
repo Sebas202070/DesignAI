@@ -201,9 +201,9 @@ export default function HomePage() {
                 {error}
                 </div>
             )}
-            {/* Lógica para mostrar la cámara o la imagen capturada */}
+            {/* Lógica para mostrar la cámara, SOLO en el panel de controles */}
             <div className="mt-4">
-                {useCamera ? (
+                {useCamera && (
                     <>
                         {!cameraActive && !error && (
                             <p className="text-gray-400 mb-2">Iniciando cámara... Por favor, espera.</p>
@@ -224,12 +224,6 @@ export default function HomePage() {
                             Capturar
                         </button>
                     </>
-                ) : (
-                    originalImagePreview && (
-                        <div className="mt-4">
-                            <img src={originalImagePreview} alt="Imagen Original" className="object-contain w-full h-full rounded" />
-                        </div>
-                    )
                 )}
             </div>
           </div>
