@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from 'react';
 
 export default function HomePage() {
   const [originalImagePreview, setOriginalImagePreview] = useState(null);
-  const [redesignPrompt, setRedesignPrompt] = useState();
+  const [redesignPrompt, setRedesignPrompt] = useState("Rediseña esta habitación con un estilo moderno y minimalista, con una paleta de colores neutros. Añade muebles limpios y contemporáneos y una gran obra de arte abstracta en una pared.");
   const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -15,9 +15,8 @@ export default function HomePage() {
   const fileInputRef = useRef(null);
   const streamRef = useRef(null);
 
-  // useEffect para manejar el ciclo de vida de la cámara
   useEffect(() => {
-    // Si la cámara debe estar activa, la iniciamos
+    // Si isCameraActive es true, iniciamos la cámara.
     if (isCameraActive) {
       startCamera();
     } else {
@@ -44,7 +43,6 @@ export default function HomePage() {
       }
     } catch (err) {
       console.error("Error al acceder a la cámara:", err);
-      // Intentamos con la cámara frontal como alternativa si la trasera falla
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
         streamRef.current = stream;
@@ -67,8 +65,10 @@ export default function HomePage() {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
-    setOriginalImagePreview(null);
-    setIsCameraActive(false);
+    // Solo actualizamos el estado si no fue a causa de un error.
+    if (!error) {
+      setIsCameraActive(false);
+    }
   };
 
   const capturePhoto = () => {
@@ -81,7 +81,7 @@ export default function HomePage() {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const dataUrl = canvas.toDataURL('image/png');
       setOriginalImagePreview(dataUrl);
-      stopCamera();
+      setIsCameraActive(false); // Desactivamos la cámara después de capturar
     } else {
       setError("La cámara no está lista para capturar.");
     }
@@ -96,7 +96,7 @@ export default function HomePage() {
       };
       reader.readAsDataURL(file);
     }
-    stopCamera();
+    setIsCameraActive(false);
   };
 
   const handleGenerateImage = async () => {
