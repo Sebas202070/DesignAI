@@ -1,42 +1,85 @@
 // app/page.js
 "use client";
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 export default function HomePage() {
   const [originalImagePreview, setOriginalImagePreview] = useState(null);
-  const [redesignPrompt, setRedesignPrompt] = useState();
+  const [redesignPrompt, setRedesignPrompt] = useState("Rediseña esta habitación con un estilo moderno y minimalista, con una paleta de colores neutros. Añade muebles limpios y contemporáneos y una gran obra de arte abstracta en una pared.");
   const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const videoRef = useRef(null);
   const fileInputRef = useRef(null);
+  const streamRef = useRef(null); // Ref para el stream de la cámara
+
+  // useEffect para iniciar/detener la cámara de manera segura
+  useEffect(() => {
+    // Limpiar al desmontar el componente
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
 
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      videoRef.current.srcObject = stream;
-      setIsCameraActive(true);
+      // Pedimos la cámara trasera, o la frontal si la trasera no está disponible
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { exact: 'environment' } },
+        audio: false,
+      });
+
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current.play();
+          setIsCameraActive(true);
+        };
+      }
     } catch (err) {
-      setError("No se pudo acceder a la cámara. Por favor, revisa los permisos.");
-      console.error(err);
+      console.error("Error al acceder a la cámara:", err);
+      // Intentamos con la cámara frontal como alternativa
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.onloadedmetadata = () => {
+            videoRef.current.play();
+            setIsCameraActive(true);
+          };
+        }
+      } catch (frontErr) {
+        setError("No se pudo acceder a ninguna cámara. Por favor, revisa los permisos.");
+        setIsCameraActive(false);
+        console.error("Error al acceder a la cámara frontal:", frontErr);
+      }
     }
   };
 
   const stopCamera = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      videoRef.current.srcObject.getTracks().forEach(track => track.stop());
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
       setIsCameraActive(false);
     }
   };
 
   const capturePhoto = () => {
     const canvas = document.createElement('canvas');
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
+    const video = videoRef.current;
+    
+    // Asegurarse de que el canvas tenga las mismas dimensiones que el video
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const dataUrl = canvas.toDataURL('image/png');
     setOriginalImagePreview(dataUrl);
     stopCamera();
