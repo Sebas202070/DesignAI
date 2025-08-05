@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from 'react';
 
 export default function HomePage() {
   const [originalImagePreview, setOriginalImagePreview] = useState(null);
-  const [redesignPrompt, setRedesignPrompt] = useState("Rediseña esta habitación con un estilo moderno y minimalista, con una paleta de colores neutros. Añade muebles limpios y contemporáneos y una gran obra de arte abstracta en una pared.");
+  const [redesignPrompt, setRedesignPrompt] = useState();
   const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -191,7 +191,13 @@ export default function HomePage() {
             </div>
             {isCameraActive && (
               <div className="mt-4">
-                <video ref={videoRef} autoPlay className="w-full h-auto rounded" />
+                <video 
+                  ref={videoRef} 
+                  autoPlay 
+                  className="w-full h-auto rounded" 
+                  playsInline 
+                  muted 
+                />
                 <button
                   onClick={capturePhoto}
                   className="mt-2 w-full py-2 bg-green-500 hover:bg-green-600 rounded font-bold"
