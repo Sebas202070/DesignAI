@@ -201,34 +201,37 @@ export default function HomePage() {
                 {error}
                 </div>
             )}
-            {useCamera ? (
-                <div className="mt-4">
-                    {!cameraActive && !error && (
-                        <p className="text-gray-400 mb-2">Iniciando cámara... Por favor, espera.</p>
-                    )}
-                    <video 
-                        ref={videoRef} 
-                        autoPlay 
-                        className="w-full h-auto rounded" 
-                        playsInline 
-                        muted 
-                        style={{ display: cameraActive ? 'block' : 'none' }}
-                    />
-                    <button
-                        onClick={capturePhoto}
-                        className="mt-2 w-full py-2 bg-green-500 hover:bg-green-600 rounded font-bold"
-                        disabled={!cameraActive}
-                    >
-                        Capturar
-                    </button>
-                </div>
-            ) : (
-                originalImagePreview && (
-                    <div className="mt-4">
-                        <img src={originalImagePreview} alt="Imagen Original" className="object-contain w-full h-full rounded" />
-                    </div>
-                )
-            )}
+            {/* Lógica para mostrar la cámara o la imagen capturada */}
+            <div className="mt-4">
+                {useCamera ? (
+                    <>
+                        {!cameraActive && !error && (
+                            <p className="text-gray-400 mb-2">Iniciando cámara... Por favor, espera.</p>
+                        )}
+                        <video 
+                            ref={videoRef} 
+                            autoPlay 
+                            className="w-full h-auto rounded" 
+                            playsInline 
+                            muted 
+                            style={{ display: cameraActive ? 'block' : 'none' }}
+                        />
+                        <button
+                            onClick={capturePhoto}
+                            className="mt-2 w-full py-2 bg-green-500 hover:bg-green-600 rounded font-bold"
+                            disabled={!cameraActive}
+                        >
+                            Capturar
+                        </button>
+                    </>
+                ) : (
+                    originalImagePreview && (
+                        <div className="mt-4">
+                            <img src={originalImagePreview} alt="Imagen Original" className="object-contain w-full h-full rounded" />
+                        </div>
+                    )
+                )}
+            </div>
           </div>
 
           <div className="mb-4 lg:mb-6">
