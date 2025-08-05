@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from 'react';
 
 export default function HomePage() {
   const [originalImagePreview, setOriginalImagePreview] = useState(null);
-  const [redesignPrompt, setRedesignPrompt] = useState("Rediseña esta habitación con un estilo moderno y minimalista, con una paleta de colores neutros. Añade muebles limpios y contemporáneos y una gran obra de arte abstracta en una pared.");
+  const [redesignPrompt, setRedesignPrompt] = useState();
   const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
